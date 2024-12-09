@@ -26,7 +26,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8080"],
+    allow_origins=["http://localhost:8080", "http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -70,3 +70,9 @@ def create_message(message: Message) -> Message:
     messages.append(response)
 
     return response
+
+@app.get("/clear_messages")
+def clear_messages():
+    del messages [:]
+    messages.append({ "role": "system", "content": "You are a helpful assistant." })
+    return messages
