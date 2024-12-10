@@ -2,7 +2,6 @@ from typing import List
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import json
 from torch import bfloat16, cuda
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
