@@ -65,3 +65,4 @@ while True:
     messages.append({ "role": "assistant", "content": response })
 
 print("Successfuly finished running LLM (model name: " + model_name + ")")
+
