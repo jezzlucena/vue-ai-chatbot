@@ -1,11 +1,9 @@
 from typing import List
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from torch import bfloat16, cuda
 from transformers import AutoModelForCausalLM, AutoTokenizer
-import os
 
 class Message(BaseModel):
     role: str
@@ -33,8 +31,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-parent_dir = os.path.dirname(os.path.abspath(__file__))
-app.mount("/dist", StaticFiles(directory=os.path.join(parent_dir, "..", "..", "frontend", "dist"), html=True), name="dist")
+# from fastapi.staticfiles import StaticFiles
+# import os
+# parent_dir = os.path.dirname(os.path.abspath(__file__))
+# app.mount("/dist", StaticFiles(directory=os.path.join(parent_dir, "..", "..", "frontend", "dist"), html=True), name="dist")
 
 @app.get("/messages")
 def get_messages() -> List[Message]:
