@@ -1,19 +1,19 @@
 <template>
-  <div class="flex flex-col h-[100vh] w-[100%] p-5 max-w-lg mx-auto my-0">
-    <div class="mb-4 text-center text-3xl">VueJS AI Chatbot <span class="text-sm">by Jezz Lucena</span></div>
-    <div ref="chatContainer" class="grow overflow-y-scroll">
+  <div class="relative flex flex-col h-[100vh] w-[100%] pb-5 pr-5 pl-5 max-w-lg mx-auto my-0">
+    <div class="absolute left-0 top-0 w-[100%] py-5 text-center text-3xl backdrop-blur-sm bg-white bg-opacity-90 pointer-events-none" style="z-index: 1;">VueJS AI Chatbot <span class="text-sm">by Jezz Lucena</span></div>
+    <div ref="chatContainer" class="chatContainer grow overflow-y-scroll pt-[76px]">
       <div class="flex mb-3" v-for="msg in messages">
         <div v-if="msg.role === 'user'" class="grow min-w-[20%]"></div>
-        <div class="relative" :class="{ 'pb-5': msg.error, 'grow mx-2': msg.role === 'system' }">
+        <div class="relative" :class="{ 'pb-5': msg.error, 'mx-auto': msg.role === 'system', 'max-w-[80%]': msg.role !== 'system' }">
           <div
             class="relative rounded py-2 px-4"
             :class="{
-              'border border-gray-300': msg.role === 'system',
+              'border border-gray-300 bg-white-100 px-6': msg.role === 'system',
               'userMessage bg-blue-500 text-white mr-2': msg.role === 'user',
               'aiMessage bg-gray-100 ml-2': msg.role === 'assistant'
             }"
           >
-            <pre class="overflow-x-auto whitespace-pre-wrap break-words"><span v-if="msg.role === 'system'">Instruction: </span>{{ msg.content }}</pre>
+            <pre class="overflow-x-auto whitespace-pre-wrap break-words text-sm hyphens-auto" :class="{ 'text-center': msg.role === 'system' }"><span v-if="msg.role === 'system'">Instruction: </span>{{ msg.content }}</pre>
           </div>
           <div v-if="msg.error" class="mr-2 text-sm absolute right-0 bottom-0 text-nowrap">Error sending message</div>
         </div>
@@ -48,7 +48,7 @@
           <button
             class="mt-1 ml-3 bg-gray-100 hover:bg-gray-200 text-black font-bold py-1 px-4 rounded"
             @click.prevent="clearMessages">Reset</button>
-          <div class="grow text-right text-xs">powered by<a href="https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct" target="_blank">Qwen2.5-1.5B-Instruct</a></div>
+          <div class="grow text-right text-xs">powered by<a class="underline" href="https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct" target="_blank">Qwen 2.5</a></div>
         </div>
       </form>
     </div>
@@ -56,6 +56,10 @@
 </template>
 
 <style scoped>
+.chatContainer::-webkit-scrollbar { 
+    display: none;
+}
+
 .userMessage, .aiMessage {
   &::after {
     content: '';

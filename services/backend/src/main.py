@@ -2,7 +2,7 @@ from typing import List
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from torch import bfloat16, cuda
+from torch import cuda
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 class Message(BaseModel):
@@ -14,7 +14,7 @@ model_name = "Qwen/Qwen2.5-1.5B-Instruct"
 device = "cuda" if cuda.is_available() else "cpu"
 model = AutoModelForCausalLM.from_pretrained(
     model_name,
-    torch_dtype=bfloat16,
+    torch_dtype="auto",
     device_map=device
 )
 tokenizer = AutoTokenizer.from_pretrained(model_name)
