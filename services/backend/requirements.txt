@@ -45,7 +45,7 @@ soupsieve==2.6
 starlette==0.41.3
 sympy==1.13.1
 tokenizers==0.20.3
-torch==2.5.1
+torch==2.6.0
 tqdm==4.67.1
 transformers==4.46.3
 typing_extensions==4.12.2
