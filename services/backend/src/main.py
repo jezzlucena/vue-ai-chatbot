@@ -70,8 +70,8 @@ def create_message(message: Message) -> Message:
 
     return response
 
-@app.get("/clear_messages")
-def clear_messages():
+@app.delete("/messages")
+def delete_messages():
     del messages [:]
     messages.append({ "role": "system", "content": "You are a helpful assistant." })
     return messages
