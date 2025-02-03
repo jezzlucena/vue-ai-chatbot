@@ -15,6 +15,7 @@ export default {
     const messages = ref<Message[]>([]);
     const isProcessing = ref(false);
     const isTyping = ref(false);
+    const isInitiated = ref(false);
     const isTestMode = ref(false);
 
     const scrollToBottom = () => {
@@ -34,6 +35,7 @@ export default {
       messages,
       isProcessing,
       isTyping,
+      isInitiated,
       isTestMode,
     };
   },
@@ -48,6 +50,7 @@ export default {
           console.error(error);
         })
         .finally(() => {
+          this.isInitiated = true;
           nextTick(() => this.scrollToBottom());
         });
     },
@@ -145,7 +148,7 @@ export default {
         <div v-if="msg.role === 'user'" class="grow min-w-[20%]"></div>
         <div class="relative" :class="{ 'pb-5': msg.error, 'mx-auto': msg.role === 'system', 'max-w-[80%]': msg.role !== 'system' }">
           <div
-            class="relative rounded py-2 px-4"
+            class="relative rounded-md py-2 px-4"
             :class="{
               'border border-gray-300 bg-white-100 px-6 text-center text-sm': msg.role === 'system',
               'userMessage bg-blue-500 text-white mr-2': msg.role === 'user',
@@ -200,7 +203,7 @@ export default {
     </div>
   </div>
   
-  <PromptModal v-if="messages.length === 0" @choose="createPrompt" style="z-index: 2;"/>
+  <PromptModal v-if="isInitiated && messages.length === 0" @choose="createPrompt" style="z-index: 2;"/>
 </template>
 
 <style scoped>
@@ -213,18 +216,18 @@ export default {
     content: '';
     position: absolute;
     bottom: 0;
-    border-top: 13px solid transparent;
+    border-top: 15px solid transparent;
   }
 }
 
 .userMessage::after {
   right: -6px;
-  border-left: 10px solid rgb(59 130 246);
+  border-left: 13px solid rgb(59 130 246);
 }
 
 .aiMessage::after {
   left: -6px;
-  border-right: 10px solid rgb(243 244 246);
+  border-right: 13px solid rgb(243 244 246);
 }
 
 .dot {
