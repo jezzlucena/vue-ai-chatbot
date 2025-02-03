@@ -40,7 +40,8 @@ onUnmounted(() => {
   <div class="fixed top-0 left-0 right-0 bottom-0">
     <div class="absolute top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50"></div>
     <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-4 rounded-lg shadow-lg w-[90%] max-w-[600px]">
-      <p class="text-gray-700 mb-4 text-2xl">Give the AI assistant an "instruction." How should they behave during this conversation?</p>
+      <div class="text-gray-700 mb-1 text-3xl">Give the AI assistant an "instruction."</div>
+      <div class="text-gray-700 mb-4 text-lg">How should they behave during this conversation?</div>
       <hr/>
       <div v-for="msg in PROMPT_MESSAGES" :key="msg" class="flex items-center justify-between p-2 mt-4 bg-gray-100 rounded-lg cursor-pointer" @click="content = msg">
         <div>{{ msg }}</div>
