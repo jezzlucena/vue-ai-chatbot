@@ -46,7 +46,7 @@ def create_message(message: Message) -> Message:
     messages.append(message)
 
     if (message.role == "system"):
-        return
+        return message
 
     # Tokenize the input text and history
     inputs = tokenizer.apply_chat_template(
