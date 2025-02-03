@@ -19,7 +19,7 @@ model = AutoModelForCausalLM.from_pretrained(
 )
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-messages: List[Message] = [{ "role": "system", "content": "You are a helpful assistant." }]
+messages: List[Message] = []
 
 app = FastAPI()
 
@@ -44,6 +44,9 @@ def get_messages() -> List[Message]:
 def create_message(message: Message) -> Message:
     # Add interaction to conversation history
     messages.append(message)
+
+    if (message.role == "system"):
+        return
 
     # Tokenize the input text and history
     inputs = tokenizer.apply_chat_template(
@@ -74,5 +77,4 @@ def create_message(message: Message) -> Message:
 @app.delete("/messages")
 def delete_messages():
     del messages [:]
-    messages.append({ "role": "system", "content": "You are a helpful assistant." })
     return messages
