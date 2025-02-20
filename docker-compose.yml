@@ -10,6 +10,7 @@ services:
     volumes:
       - ./services/backend:/app
     command: uvicorn src.main:app --host 0.0.0.0 --port 5051
+    restart: always
 
   frontend:
     build: ./services/frontend
@@ -18,3 +19,4 @@ services:
       - '/app/node_modules'
     ports:
       - 8081:8081
+    restart: always

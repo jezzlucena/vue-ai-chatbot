@@ -19,6 +19,7 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+    restart: always
 
   frontend:
     build: ./services/frontend
@@ -27,3 +28,4 @@ services:
       - '/app/node_modules'
     ports:
       - 8081:8081
+    restart: always
