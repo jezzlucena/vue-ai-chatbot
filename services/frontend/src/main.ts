@@ -9,5 +9,6 @@ const app = createApp(App)
 
 axios.defaults.withCredentials = true
 axios.defaults.baseURL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5051/'  // the FastAPI backend
+axios.defaults.headers.common["ngrok-skip-browser-warning"] = '12345'
 
 app.mount('#app')
