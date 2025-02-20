@@ -25,7 +25,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8081", "http://143.198.102.62:8081", "http://jezzlucena.com:8081", "http://jezzlucena.xyz:8081"],
+    allow_origins=["http://localhost:8081", "http://143.198.102.62:8081", "https://chatbot.jezzlucena.com", "https://chatbot.jezzlucena.xyz"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
