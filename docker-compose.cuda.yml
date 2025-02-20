@@ -8,10 +8,10 @@ services:
       context: ./services/backend
       dockerfile: Dockerfile.cuda
     ports:
-      - 5050:5050
+      - 5051:5051
     volumes:
       - ./services/backend:/app
-    command: uvicorn src.main:app --host 0.0.0.0 --port 5050
+    command: uvicorn src.main:app --host 0.0.0.0 --port 5051
     deploy:
       resources:
         reservations:
@@ -26,4 +26,4 @@ services:
       - './services/frontend:/app'
       - '/app/node_modules'
     ports:
-      - 8080:8080
+      - 8081:8081
