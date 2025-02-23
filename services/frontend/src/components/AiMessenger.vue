@@ -1,14 +1,14 @@
 <script lang="ts">
 import type { Message } from '@/types/Message';
 import axios from 'axios';
-import { nextTick, onMounted, ref } from 'vue';
+import { nextTick, onMounted, onUnmounted, ref } from 'vue';
 import PromptModal from './PromptModal.vue';
 import { toast } from 'vue3-toastify';
 import 'vue3-toastify/dist/index.css';
 
 /** Example of how to use the Options API */
 export default {
-  name: 'Messages',
+  name: 'AiMessenger',
   setup() {
     const chatContainer = ref<HTMLDivElement | null>(null);
     const message = ref("");
@@ -17,6 +17,7 @@ export default {
     const isTyping = ref(false);
     const isInitiated = ref(false);
     const isTestMode = ref(false);
+    const ws = ref<WebSocket | null>(null);
 
     const scrollToBottom = () => {
       if (chatContainer.value) {
@@ -25,11 +26,66 @@ export default {
     };
 
     onMounted(() => {
-      scrollToBottom(); // Scroll to bottom on initial load
+      ws.value = new WebSocket(import.meta.env.VITE_WEBSOCKET_URL);
+
+      ws.value.onopen = () => {
+        console.log('Connected to WebSocket server');
+      };
+
+      ws.value.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        if (data.type === 'reset') messages.value = [];
+        else if (data.type === 'userMessage') {
+          messages.value.push({
+            role: 'user',
+            content: data.content
+          });
+          isTyping.value = true;
+          isProcessing.value = true;
+        } else if (data.type === 'assistantMessage') {
+          messages.value.push({
+            role: 'assistant',
+            content: data.content
+          });
+          isTyping.value = false;
+          isProcessing.value = false;
+        } else if (data.type === 'prompt') {
+          messages.value.push({
+            role: 'system',
+            content: data.content
+          });
+          isProcessing.value = false;
+        }
+
+        nextTick(() => scrollToBottom());
+      };
+
+      ws.value.onclose = () => {
+        console.log('Disconnected from WebSocket server');
+      };
+
+      ws.value.onerror = (error) => {
+        console.error('WebSocket error:', error);
+      };
     });
+
+    onUnmounted(() => {
+      if (ws.value) {
+        ws.value.close();
+      }
+    });
+
+    const sendMessage = (type: 'reset' | 'userMessage' | 'prompt', content?: string) => {
+      if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+        ws.value.send(JSON.stringify({ type, content }));
+        message.value = '';
+      }
+    }
 
     return {
       chatContainer,
+      sendMessage,
       scrollToBottom,
       message,
       messages,
@@ -55,74 +111,14 @@ export default {
         });
     },
     createPrompt(content: string) {
-      this.isProcessing = true;
-      
-      const systemMessage: Message = { role: "system", content };
-      this.messages.push(systemMessage);
-      nextTick(() => this.scrollToBottom());
-
-      this.createMessage(systemMessage);
+      this.sendMessage('prompt', content);
     },
     createUserMessage() {
       if (!this.message || this.isProcessing) return;
-
-      this.isProcessing = true;
-
-      const typingTimeout = setTimeout(() => {
-        this.isTyping = true;
-        nextTick(() => this.scrollToBottom());
-      }, 500);
-      
-      const userMessage: Message = { role: "user", content: this.message };
-      this.messages.push(userMessage);
-      nextTick(() => this.scrollToBottom());
-
-      if (this.isTestMode) {
-        this.waitAndDefaultResponse();
-      } else {
-        this.createMessage(userMessage, typingTimeout);
-      }
-
-      this.message = "";
-    },
-    createMessage(message: Message, typingTimeout?: number) {
-      axios.post('/messages', message)
-        .then((res) => {
-          if (message.role === 'user') {
-            this.messages.push(res.data);
-          }
-        })
-        .catch((error) => {
-          message.error = true;
-          toast.error("Failed to send message. Please reload.", { position: toast.POSITION.BOTTOM_RIGHT });
-          console.error(error);
-        })
-        .finally(() => {
-          this.isProcessing = false;
-          this.isTyping = false;
-          nextTick(() => this.scrollToBottom());
-          clearTimeout(typingTimeout);
-        });
-    },
-    waitAndDefaultResponse() {
-      setTimeout(() => {
-          const aiMessage: Message = { role: "assistant", content: "I'm sorry, I'm just a demo chatbot. I can't respond to your message." };
-          this.messages.push(aiMessage);
-          this.isProcessing = false;
-          this.isTyping = false;
-
-          nextTick(() => this.scrollToBottom());
-        }, 2000);
+      this.sendMessage('userMessage', this.message);
     },
     clearMessages() {
-      axios.delete('/messages')
-        .then((res) => {
-          this.messages = res.data;
-        })
-        .catch((error) => {
-          console.error(error);
-          toast.error("Failed to clear messages. Please reload.", { position: toast.POSITION.BOTTOM_RIGHT });
-        });
+      this.sendMessage('reset');
     },
     resizeTextArea(event: FocusEvent | KeyboardEvent) {
       const textarea = event.target as HTMLTextAreaElement;
@@ -142,9 +138,9 @@ export default {
 
 <template>
   <div class="relative flex flex-col h-[100vh] w-[100%] pb-5 pr-5 pl-5 max-w-lg mx-auto my-0">
-    <div class="absolute left-0 top-0 w-[100%] py-5 text-center text-3xl backdrop-blur-sm bg-white bg-opacity-90 pointer-events-none whitespace-nowrap border-b border-gray border-solid" style="z-index: 1;">VueJS AI Chatbot <span class="text-sm">by Jezz Lucena</span></div>
+    <div class="absolute left-0 top-0 w-[100%] py-5 text-center text-3xl backdrop-blur-sm bg-white bg-opacity-90 pointer-events-none whitespace-nowrap border-b border-gray border-solid" style="z-index: 1;">AI Chatbot <span class="text-sm">by Jezz Lucena</span></div>
     <div ref="chatContainer" class="chatContainer grow overflow-y-scroll pt-[90px]">
-      <div class="flex mb-3" v-for="msg in messages">
+      <div class="flex mb-3" v-for="(msg, index) in messages" :key="index">
         <div v-if="msg.role === 'user'" class="grow min-w-[20%]"></div>
         <div class="relative" :class="{ 'pb-5': msg.error, 'mx-auto': msg.role === 'system', 'max-w-[80%]': msg.role !== 'system' }">
           <div
@@ -202,12 +198,12 @@ export default {
       </form>
     </div>
   </div>
-  
+
   <PromptModal v-if="isInitiated && messages.length === 0" @choose="createPrompt" style="z-index: 2;"/>
 </template>
 
 <style scoped>
-.chatContainer::-webkit-scrollbar { 
+.chatContainer::-webkit-scrollbar {
     display: none;
 }
 

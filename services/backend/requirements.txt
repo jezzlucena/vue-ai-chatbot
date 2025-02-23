@@ -6,6 +6,7 @@ cachetools==5.5.0
 certifi==2024.8.30
 charset-normalizer==3.4.0
 click==8.1.7
+cmake==3.31.4
 fastapi==0.115.6
 filelock==3.16.1
 fsspec==2024.10.0
@@ -52,3 +53,4 @@ typing_extensions==4.12.2
 uritemplate==4.1.1
 urllib3==2.2.3
 uvicorn==0.32.1
+websockets==15.0

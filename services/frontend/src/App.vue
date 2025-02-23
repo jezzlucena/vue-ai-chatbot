@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import Messenger from './components/Messenger.vue'
+import AiMessenger from './components/AiMessenger.vue'
 </script>
 
 <template>
-  <Messenger />
+  <AiMessenger />
 </template>
