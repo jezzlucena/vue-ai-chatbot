@@ -43,19 +43,21 @@ export default {
           });
           isTyping.value = true;
           isProcessing.value = true;
-        } else if (data.type === 'assistantMessage') {
+        } else if (data.type === 'assistantMessageStart') {
           messages.value.push({
             role: 'assistant',
-            content: data.content
+            content: ''
           });
           isTyping.value = false;
+        } else if (data.type === 'assistantChunk') {
+          messages.value[messages.value.length-1].content += data.content;
+        } else if (data.type === 'assistantMessageEnd') {
           isProcessing.value = false;
         } else if (data.type === 'prompt') {
           messages.value.push({
             role: 'system',
             content: data.content
           });
-          isProcessing.value = false;
         }
 
         nextTick(() => scrollToBottom());

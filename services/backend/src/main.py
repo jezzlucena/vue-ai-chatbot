@@ -1,10 +1,11 @@
 import json
+from threading import Thread
 from typing import List
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from torch import cuda
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, AsyncTextIteratorStreamer
 
 class Message(BaseModel):
     role: str
@@ -20,13 +21,15 @@ model = AutoModelForCausalLM.from_pretrained(
 )
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
+EOS_TOKEN = "<|im_end|>"
+
 messages: List[Message] = []
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8081", "http://143.198.102.62:8081", "https://chatbot.jezzlucena.com", "https://chatbot.jezzlucena.xyz"],
+    allow_origins=["http://localhost:8081", "https://chatbot.jezzlucena.com"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -42,9 +45,6 @@ class ConnectionManager:
 
     def disconnect(self, websocket: WebSocket):
         self.active_connections.remove(websocket)
-
-    async def send_personal_message(self, message: str, websocket: WebSocket):
-        await websocket.send_text(message)
 
     async def broadcast(self, message: str):
         for connection in self.active_connections:
@@ -79,25 +79,39 @@ async def websocket_endpoint(websocket: WebSocket):
                 )
                 model_inputs = tokenizer([inputs], return_tensors="pt").to(device)
 
-                # Generate the response from the model
-                outputs = model.generate(
-                    **model_inputs,
-                    max_new_tokens=512
-                )
+                decode_kwargs = dict(skip_special_tokens=True)
+                streamer = AsyncTextIteratorStreamer(tokenizer, skip_prompt=True, decode_kwargs=decode_kwargs)
+                generation_kwargs = dict(**model_inputs, streamer=streamer, max_new_tokens=512)
 
-                # Decode the response
-                generated_ids = [
-                    output_ids[len(input_ids):] for input_ids, output_ids in zip(model_inputs.input_ids, outputs)
-                ]
-                response_text = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
-                response = { "role": "assistant", "content": response_text }
+                thread = Thread(target=model.generate, kwargs=generation_kwargs)
+                thread.start()
 
-                # Add interaction to conversation history
+                stream_started = False
+
+                response = { "role": "assistant", "content": "" }
+
+                # Add interaction to conversation history preemptively
                 messages.append(response)
-                
+
+                async for chunk in streamer:
+                    if (not stream_started and chunk != ""):
+                        await manager.broadcast(json.dumps({
+                            'type': "assistantMessageStart"
+                        }))
+                        stream_started = True
+                    
+                    word = chunk
+                    if (chunk.endswith(EOS_TOKEN)):
+                        word = word.split(EOS_TOKEN)[0]
+                    await manager.broadcast(json.dumps({
+                        'type': "assistantChunk",
+                        'content': word
+                    }))
+
+                    response["content"] += word
+
                 await manager.broadcast(json.dumps({
-                    'type': "assistantMessage",
-                    'content': response_text
+                    'type': "assistantMessageEnd"
                 }))
             elif (data['type'] == 'prompt'):
                 messages.append({ 'role': "system", 'content': data['content'] })
