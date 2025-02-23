@@ -3,8 +3,10 @@ import type { Message } from '@/types/Message';
 import axios from 'axios';
 import { nextTick, onMounted, onUnmounted, ref } from 'vue';
 import PromptModal from './PromptModal.vue';
-import { toast } from 'vue3-toastify';
+import { toast, type ToastOptions } from 'vue3-toastify';
 import 'vue3-toastify/dist/index.css';
+
+const TOAST_OPTIONS: ToastOptions = { position: toast.POSITION.BOTTOM_RIGHT };
 
 /** Example of how to use the Options API */
 export default {
@@ -13,7 +15,7 @@ export default {
     const chatContainer = ref<HTMLDivElement | null>(null);
     const message = ref("");
     const messages = ref<Message[]>([]);
-    const isProcessing = ref(false);
+    const isLocked = ref(true);
     const isTyping = ref(false);
     const isInitiated = ref(false);
     const isTestMode = ref(false);
@@ -29,7 +31,8 @@ export default {
       ws.value = new WebSocket(import.meta.env.VITE_WEBSOCKET_URL);
 
       ws.value.onopen = () => {
-        console.log('Connected to WebSocket server');
+        toast.success("Connected to the server.", TOAST_OPTIONS);
+        isLocked.value = false;
       };
 
       ws.value.onmessage = (event) => {
@@ -42,7 +45,7 @@ export default {
             content: data.content
           });
           isTyping.value = true;
-          isProcessing.value = true;
+          isLocked.value = true;
         } else if (data.type === 'assistantMessageStart') {
           messages.value.push({
             role: 'assistant',
@@ -52,7 +55,7 @@ export default {
         } else if (data.type === 'assistantChunk') {
           messages.value[messages.value.length-1].content += data.content;
         } else if (data.type === 'assistantMessageEnd') {
-          isProcessing.value = false;
+          isLocked.value = false;
         } else if (data.type === 'prompt') {
           messages.value.push({
             role: 'system',
@@ -64,11 +67,12 @@ export default {
       };
 
       ws.value.onclose = () => {
-        console.log('Disconnected from WebSocket server');
+        toast.error("Disconnected from the server.", TOAST_OPTIONS);
+        isLocked.value = true;
       };
 
       ws.value.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        toast.error(`WebSocket error: ${error}`, TOAST_OPTIONS);
       };
     });
 
@@ -91,7 +95,7 @@ export default {
       scrollToBottom,
       message,
       messages,
-      isProcessing,
+      isLocked,
       isTyping,
       isInitiated,
       isTestMode,
@@ -104,7 +108,7 @@ export default {
           this.messages = res.data;
         })
         .catch((error) => {
-          toast.error("Failed to fetch messages.", { position: toast.POSITION.BOTTOM_RIGHT });
+          toast.error("Failed to fetch messages from the server.", { position: toast.POSITION.BOTTOM_RIGHT });
           console.error(error);
         })
         .finally(() => {
@@ -116,10 +120,11 @@ export default {
       this.sendMessage('prompt', content);
     },
     createUserMessage() {
-      if (!this.message || this.isProcessing) return;
+      if (!this.message || this.isLocked) return;
       this.sendMessage('userMessage', this.message);
     },
     clearMessages() {
+      if (this.messages.values.length === 0 || this.isLocked) return;
       this.sendMessage('reset');
     },
     resizeTextArea(event: FocusEvent | KeyboardEvent) {
@@ -139,7 +144,7 @@ export default {
 </script>
 
 <template>
-  <div class="relative flex flex-col h-[100vh] w-[100%] pb-5 pr-5 pl-5 max-w-lg mx-auto my-0">
+  <div class="absolute flex flex-col top-0 left-[50%] bottom-0 w-[100%] -translate-x-[50%] pb-5 pr-5 pl-5 max-w-lg mx-auto my-0">
     <div class="absolute left-0 top-0 w-[100%] py-5 text-center text-3xl backdrop-blur-sm bg-white bg-opacity-90 pointer-events-none whitespace-nowrap border-b border-gray border-solid" style="z-index: 1;">AI Chatbot <span class="text-sm">by Jezz Lucena</span></div>
     <div ref="chatContainer" class="chatContainer grow overflow-y-scroll pt-[90px]">
       <div class="flex mb-3" v-for="(msg, index) in messages" :key="index">
@@ -191,10 +196,11 @@ export default {
           <button
             class="mt-1 r-0 bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-4 rounded"
             type="submit"
-            :class="{ 'bg-blue-300 pointer-events-none': isProcessing }">Send</button>
+            :class="{ 'opacity-50 cursor-not-allowed': isLocked }">Send</button>
           <button
             class="mt-1 ml-3 bg-gray-100 hover:bg-gray-200 text-black font-bold py-1 px-4 rounded"
-            @click.prevent="clearMessages">Reset</button>
+            @click.prevent="clearMessages"
+            :class="{ 'opacity-50 cursor-not-allowed': isLocked }">Reset</button>
           <div class="grow text-right text-xs">powered by<a class="underline" href="https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct" target="_blank">Qwen 2.5</a></div>
         </div>
       </form>
