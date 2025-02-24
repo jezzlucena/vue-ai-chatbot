@@ -9,7 +9,6 @@ services:
       - 5051:5051
     volumes:
       - ./services/backend:/app
-      - pip_cache:/root/.cache/pip
       - huggingface_hub_cache:/root/.cache/huggingface/hub
     command: uvicorn src.main:app --host 0.0.0.0 --port 5051
     restart: always
@@ -22,3 +21,7 @@ services:
     ports:
       - 8081:8081
     restart: always
+
+volumes:
+  huggingface_hub_cache:
+  node_modules:
