@@ -195,21 +195,23 @@ onUnmounted(() => {
           @keyup="resizeTextArea"
           @focus="resizeTextArea"
         ></textarea>
-        <div class="flex">
-          <button
-            class="mt-1 r-0 bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-4 rounded"
-            type="submit"
-            :class="{ 'opacity-50 cursor-not-allowed': isLocked }">{{ $t("send") }}</button>
-          <button
-            class="mt-1 ml-2 bg-gray-100 hover:bg-gray-200 text-black font-bold py-1 px-4 rounded"
-            @click.prevent="clearMessages"
-            :class="{ 'opacity-50 cursor-not-allowed': isLocked }">{{ $t("reset") }}</button>
+        <div class="flex font-bold text-xs">
+          <div class="grow">powered by<a class="underline" href="https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct" target="_blank">Qwen 2.5</a></div>
           <button
             v-if="language"
-            class="mt-1 ml-2 bg-gray-100 hover:bg-gray-200 text-black font-bold py-1 px-4 rounded"
+            class="ml-2 mt-1 bg-gray-100 hover:bg-gray-200 text-black py-1 px-2 rounded"
             @click.prevent="() => language = null"
-            :class="{ 'opacity-50 cursor-not-allowed': isLocked }">{{ LANGUAGES[language] }}</button>
-          <div class="grow text-right text-xs">powered by<a class="underline" href="https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct" target="_blank">Qwen 2.5</a></div>
+          >{{ LANGUAGES[language] }}</button>
+          <button
+            class="ml-2 mt-1 bg-gray-100 hover:bg-gray-200 text-black py-1 px-2 rounded"
+            @click.prevent="clearMessages"
+            :class="{ 'opacity-50 cursor-not-allowed': isLocked }"
+          >{{ $t("reset") }}</button>
+          <button
+            class="ml-2 mt-1 bg-blue-500 hover:bg-blue-700 text-white py-1 px-2 rounded"
+            type="submit"
+            :class="{ 'opacity-50 cursor-not-allowed': isLocked }"
+          >{{ $t("send") }}</button>
         </div>
       </form>
     </div>
