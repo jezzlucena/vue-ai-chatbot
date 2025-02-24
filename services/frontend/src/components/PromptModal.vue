@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { ref, defineProps, onMounted, onUnmounted } from 'vue';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 const textarea = ref<HTMLTextAreaElement | null>(null);
 
 const PROMPT_MESSAGES = [
-  "You are a helpful assistant.",
-  "You are a friendly waiter at a busy restaurant.",
-  "You are a pirate with a heavy Irish accent.",
-  "You are a cognitive-behavioural therapist."
+  t("prompt.helpfulAssistant"),
+  t("prompt.friendlyWaiter"),
+  t("prompt.irishPirate"),
+  t("prompt.therapist")
 ];
 
 const props = defineProps<{
@@ -40,12 +43,12 @@ onUnmounted(() => {
   <div class="fixed top-0 left-0 right-0 bottom-0">
     <div class="absolute top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50"></div>
     <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-4 rounded-lg shadow-lg w-[90%] max-w-[600px]">
-      <div class="text-gray-700 mb-1 text-3xl">Give the AI assistant an "instruction."</div>
-      <div class="text-gray-700 mb-4 text-lg">How should they behave during this conversation?</div>
+      <div class="text-gray-700 mb-1 text-3xl">{{ $t('prompt.giveInstruction') }}</div>
+      <div class="text-gray-700 mb-4 text-lg">{{ $t('prompt.howShouldBehave') }}</div>
       <hr/>
       <div v-for="msg in PROMPT_MESSAGES" :key="msg" class="flex items-center justify-between p-2 mt-4 bg-gray-100 rounded-lg cursor-pointer" @click="content = msg">
         <div>{{ msg }}</div>
-        <div class="text-xs text-gray-500 ml-2">Choose</div>
+        <div class="text-xs text-gray-500 ml-2">{{ $t('choose') }}</div>
       </div>
       <div class="mt-4">
         <form @submit.prevent="handleChoose">
@@ -61,7 +64,7 @@ onUnmounted(() => {
           <div class="flex">
             <button
               class="mt-1 r-0 bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-4 rounded"
-              type="submit">Send</button>
+              type="submit">{{ $t("send") }}</button>
         </div>
         </form>
       </div>

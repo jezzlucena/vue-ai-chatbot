@@ -1,0 +1,25 @@
+{
+  "title": "AI Chatbot",
+  "byJezzLucena": "by Jezz Lucena",
+  "choose": "Choose",
+  "send": "Send",
+  "reset": "Reset",
+  "changeLanguage": "Change Language",
+  "poweredBy": "powered by",
+  "prompt": {
+    "giveInstruction": "Give the AI assistant an \"instruction.\"",
+    "howShouldBehave": "How should they behave during this conversation?",
+    "helpfulAssistant": "You are a helpful assistant.",
+    "friendlyWaiter": "You are a friendly waiter at a busy restaurant.",
+    "irishPirate": "You are a pirate with a heavy Irish accent.",
+    "therapist": "You are a cognitive-behavioural therapist."
+  },
+  "connected": "Connected to the server.",
+  "disconnected": "Disconnected from the server.",
+  "error": {
+    "sendingMessage": "Error sending message.",
+    "resetting": "Error resetting messages.",
+    "fetchingMessages": "Failed to fetch messages from the server.",
+    "websocket": "Unknown WebSocket Error. Please contact the admin."
+  }
+}

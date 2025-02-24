@@ -1,0 +1,25 @@
+{
+  "title": "Chatbot IA",
+  "byJezzLucena": "por Jezz Lucena",
+  "choose": "Escolher",
+  "send": "Enviar",
+  "reset": "Limpar",
+  "changeLanguage": "Mudar Idioma",
+  "poweredBy": "powered by",
+  "prompt": {
+    "giveInstruction": "Dê \"instruções\" ao seu assistente IA.",
+    "howShouldBehave": "Como deve se comportar-se durante esta conversa?",
+    "helpfulAssistant": "Você é um assistente prestativo.",
+    "friendlyWaiter": "Você é uma garçonete em um restaurante movimentado.",
+    "irishPirate": "Você é um pirata com um sotaque irlandês pesado.",
+    "therapist": "Você é uma terapeuta cognitivo-comportamental."
+  },
+  "connected": "Conectado ao servidor.",
+  "disconnected": "Disconectado do servidor.",
+  "error": {
+    "sendingMessage": "Erro ao enviar mensagem.",
+    "resetting": "Erro limpando mensagens.",
+    "fetchingMessages": "Erro ao recuperar mensagens do servidor.",
+    "websocket": "Erro desconhecido no WebSocket. Por favor contacte o admin."
+  }
+}

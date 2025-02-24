@@ -1,151 +1,151 @@
-<script lang="ts">
+<script setup lang="ts">
 import type { Message } from '@/types/Message';
 import axios from 'axios';
 import { nextTick, onMounted, onUnmounted, ref } from 'vue';
 import PromptModal from './PromptModal.vue';
+import LanguageModal from './LanguageModal.vue';
 import { toast, type ToastOptions } from 'vue3-toastify';
 import 'vue3-toastify/dist/index.css';
+import type { Language } from '@/types/Language';
+import { useI18n } from 'vue-i18n';
+import { LANGUAGES } from '@/utils/constants'
+
+const { t } = useI18n();
 
 const TOAST_OPTIONS: ToastOptions = { position: toast.POSITION.BOTTOM_RIGHT };
 
-/** Example of how to use the Options API */
-export default {
-  name: 'AiMessenger',
-  setup() {
-    const chatContainer = ref<HTMLDivElement | null>(null);
-    const message = ref("");
-    const messages = ref<Message[]>([]);
-    const isLocked = ref(true);
-    const isTyping = ref(false);
-    const isInitiated = ref(false);
-    const isTestMode = ref(false);
-    const ws = ref<WebSocket | null>(null);
+const chatContainer = ref<HTMLDivElement | null>(null);
+const message = ref("");
+const messages = ref<Message[]>([]);
+const isLocked = ref(true);
+const isTyping = ref(false);
+const isInitiated = ref(false);
+const language = ref<Language | null>(null);
+const ws = ref<WebSocket | null>(null);
 
-    const scrollToBottom = () => {
-      if (chatContainer.value) {
-        chatContainer.value.scrollTop = chatContainer.value.scrollHeight;
-      }
-    };
+const scrollToBottom = () => {
+  if (chatContainer.value) {
+    chatContainer.value.scrollTop = chatContainer.value.scrollHeight;
+  }
+};
 
-    onMounted(() => {
-      ws.value = new WebSocket(import.meta.env.VITE_WEBSOCKET_URL);
-
-      ws.value.onopen = () => {
-        toast.success("Connected to the server.", TOAST_OPTIONS);
-        isLocked.value = false;
-      };
-
-      ws.value.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-
-        if (data.type === 'reset') messages.value = [];
-        else if (data.type === 'userMessage') {
-          messages.value.push({
-            role: 'user',
-            content: data.content
-          });
-          isTyping.value = true;
-          isLocked.value = true;
-        } else if (data.type === 'assistantMessageStart') {
-          messages.value.push({
-            role: 'assistant',
-            content: ''
-          });
-          isTyping.value = false;
-        } else if (data.type === 'assistantChunk') {
-          messages.value[messages.value.length-1].content += data.content;
-        } else if (data.type === 'assistantMessageEnd') {
-          isLocked.value = false;
-        } else if (data.type === 'prompt') {
-          messages.value.push({
-            role: 'system',
-            content: data.content
-          });
-        }
-
-        nextTick(() => scrollToBottom());
-      };
-
-      ws.value.onclose = () => {
-        toast.error("Disconnected from the server.", TOAST_OPTIONS);
-        isLocked.value = true;
-      };
-
-      ws.value.onerror = (error) => {
-        toast.error(`WebSocket error: ${error}`, TOAST_OPTIONS);
-      };
-    });
-
-    onUnmounted(() => {
-      if (ws.value) {
-        ws.value.close();
-      }
-    });
-
-    const sendMessage = (type: 'reset' | 'userMessage' | 'prompt', content?: string) => {
-      if (ws.value && ws.value.readyState === WebSocket.OPEN) {
-        ws.value.send(JSON.stringify({ type, content }));
-        message.value = '';
-      }
+const sendMessage = (type: 'reset' | 'userMessage' | 'prompt', content?: string) => {
+  if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+    ws.value.send(JSON.stringify({ type, content }));
+    message.value = '';
+  } else {
+    switch (type) {
+      case 'prompt':
+        messages.value.push({ role: 'system', content: content || '', error: true })
+        break;
+      case 'reset':
+        toast.error(t("error.sendingMessage"), TOAST_OPTIONS)
+        break;
+      case 'userMessage':
+        messages.value.push({ role: 'user', content: content || '', error: true });
+        toast.error(t("error.resetting"), TOAST_OPTIONS)
     }
 
-    return {
-      chatContainer,
-      sendMessage,
-      scrollToBottom,
-      message,
-      messages,
-      isLocked,
-      isTyping,
-      isInitiated,
-      isTestMode,
-    };
-  },
-  methods: {
-    getMessages() {
-      axios.get('/messages')
-        .then((res) => {
-          this.messages = res.data;
-        })
-        .catch((error) => {
-          toast.error("Failed to fetch messages from the server.", { position: toast.POSITION.BOTTOM_RIGHT });
-          console.error(error);
-        })
-        .finally(() => {
-          this.isInitiated = true;
-          nextTick(() => this.scrollToBottom());
-        });
-    },
-    createPrompt(content: string) {
-      this.sendMessage('prompt', content);
-    },
-    createUserMessage() {
-      if (!this.message || this.isLocked) return;
-      this.sendMessage('userMessage', this.message);
-    },
-    clearMessages() {
-      if (this.messages.values.length === 0 || this.isLocked) return;
-      this.sendMessage('reset');
-    },
-    resizeTextArea(event: FocusEvent | KeyboardEvent) {
-      const textarea = event.target as HTMLTextAreaElement;
-      textarea.style.height = "auto";
-      textarea.style.height = `${textarea.scrollHeight}px`;
-      nextTick(() => this.scrollToBottom());
-    },
-  },
-  created() {
-    this.getMessages();
-  },
-  components: {
-    PromptModal,
-  },
-};
+  }
+}
+
+const getMessages = () => {
+  axios.get('/messages')
+    .then((res) => {
+      messages.value = res.data;
+    })
+    .catch((error) => {
+      toast.error(t("error.fetchingMessages"), { position: toast.POSITION.BOTTOM_RIGHT });
+      console.error(error);
+    })
+    .finally(() => {
+      isInitiated.value = true;
+      nextTick(() => scrollToBottom());
+    });
+}
+
+const createPrompt = (content: string) => {
+  sendMessage('prompt', content);
+}
+
+const createUserMessage = () => {
+  if (!message.value || isLocked.value) return;
+  sendMessage('userMessage', message.value);
+}
+
+const clearMessages = () => {
+  if (messages.value.length === 0 || isLocked.value) return;
+  sendMessage('reset');
+}
+
+const resizeTextArea = (event: FocusEvent | KeyboardEvent) => {
+  const textarea = event.target as HTMLTextAreaElement;
+  textarea.style.height = "auto";
+  textarea.style.height = `${textarea.scrollHeight}px`;
+  nextTick(() => scrollToBottom());
+}
+
+onMounted(() => {
+  getMessages();
+
+  ws.value = new WebSocket(import.meta.env.VITE_WEBSOCKET_URL);
+
+  ws.value.onopen = () => {
+    toast.success(t("connected"), TOAST_OPTIONS);
+    isLocked.value = false;
+  };
+
+  ws.value.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+
+    if (data.type === 'reset') messages.value = [];
+    else if (data.type === 'userMessage') {
+      messages.value.push({
+        role: 'user',
+        content: data.content
+      });
+      isTyping.value = true;
+      isLocked.value = true;
+    } else if (data.type === 'assistantMessageStart') {
+      messages.value.push({
+        role: 'assistant',
+        content: ''
+      });
+      isTyping.value = false;
+    } else if (data.type === 'assistantChunk') {
+      messages.value[messages.value.length-1].content += data.content;
+    } else if (data.type === 'assistantMessageEnd') {
+      isLocked.value = false;
+    } else if (data.type === 'prompt') {
+      messages.value.push({
+        role: 'system',
+        content: data.content
+      });
+    }
+
+    nextTick(() => scrollToBottom());
+  };
+
+  ws.value.onclose = () => {
+    toast.error(t("disconnected"), TOAST_OPTIONS);
+    isLocked.value = true;
+  };
+
+  ws.value.onerror = () => {
+    toast.error(t("error.websocket"), TOAST_OPTIONS);
+  };
+});
+
+onUnmounted(() => {
+  if (ws.value) {
+    ws.value.close();
+  }
+});
 </script>
 
 <template>
-  <div class="absolute flex flex-col top-0 left-[50%] bottom-0 w-[100%] -translate-x-[50%] pb-5 pr-5 pl-5 max-w-lg mx-auto my-0">
-    <div class="absolute left-0 top-0 w-[100%] py-5 text-center text-3xl backdrop-blur-sm bg-white bg-opacity-90 pointer-events-none whitespace-nowrap border-b border-gray border-solid" style="z-index: 1;">AI Chatbot <span class="text-sm">by Jezz Lucena</span></div>
+  <div class="absolute flex flex-col top-0 left-[50%] bottom-0 w-[100%] -translate-x-[50%] pb-5 pr-5 pl-5 max-w-lg mx-auto my-0 overflow-hidden">
+    <div class="absolute left-0 top-0 w-[100%] py-5 text-center text-3xl backdrop-blur-sm bg-white bg-opacity-90 pointer-events-none whitespace-nowrap border-b border-gray border-solid" style="z-index: 1;">{{ $t("title") }} <span class="text-sm">{{ $t("byJezzLucena") }}</span></div>
     <div ref="chatContainer" class="chatContainer grow overflow-y-scroll pt-[90px]">
       <div class="flex mb-3" v-for="(msg, index) in messages" :key="index">
         <div v-if="msg.role === 'user'" class="grow min-w-[20%]"></div>
@@ -153,12 +153,15 @@ export default {
           <div
             class="relative rounded-md py-2 px-4"
             :class="{
-              'border border-gray-300 bg-white-100 px-6 text-center text-sm': msg.role === 'system',
+              'border border-gray-300 bg-white-100 px-6 text-center': msg.role === 'system',
               'userMessage bg-blue-500 text-white mr-2': msg.role === 'user',
               'aiMessage bg-gray-100 ml-2': msg.role === 'assistant'
             }"
           >
-            <pre class="overflow-x-auto whitespace-pre-wrap break-words text-sm hyphens-auto">{{ msg.content }}</pre>
+            <pre
+              class="overflow-x-auto whitespace-pre-wrap break-words text-sm hyphens-auto"
+              :class="{ 'text-xs': msg.role === 'system' }"
+            >{{ msg.content }}</pre>
           </div>
           <div
             v-if="msg.error"
@@ -168,7 +171,7 @@ export default {
               'right-0': msg.role === 'user',
               'left-0': msg.role === 'assistant'
             }"
-          >Error sending message</div>
+          >{{ $t("error.sendingMessage") }}</div>
         </div>
         <div v-if="msg.role === 'assistant'" class="grow min-w-[20%]"></div>
       </div>
@@ -196,18 +199,30 @@ export default {
           <button
             class="mt-1 r-0 bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-4 rounded"
             type="submit"
-            :class="{ 'opacity-50 cursor-not-allowed': isLocked }">Send</button>
+            :class="{ 'opacity-50 cursor-not-allowed': isLocked }">{{ $t("send") }}</button>
           <button
-            class="mt-1 ml-3 bg-gray-100 hover:bg-gray-200 text-black font-bold py-1 px-4 rounded"
+            class="mt-1 ml-2 bg-gray-100 hover:bg-gray-200 text-black font-bold py-1 px-4 rounded"
             @click.prevent="clearMessages"
-            :class="{ 'opacity-50 cursor-not-allowed': isLocked }">Reset</button>
+            :class="{ 'opacity-50 cursor-not-allowed': isLocked }">{{ $t("reset") }}</button>
+          <button
+            v-if="language"
+            class="mt-1 ml-2 bg-gray-100 hover:bg-gray-200 text-black font-bold py-1 px-4 rounded"
+            @click.prevent="() => language = null"
+            :class="{ 'opacity-50 cursor-not-allowed': isLocked }">{{ LANGUAGES[language] }}</button>
           <div class="grow text-right text-xs">powered by<a class="underline" href="https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct" target="_blank">Qwen 2.5</a></div>
         </div>
       </form>
     </div>
   </div>
 
-  <PromptModal v-if="isInitiated && messages.length === 0" @choose="createPrompt" style="z-index: 2;"/>
+  <PromptModal v-if="language && isInitiated && messages.length === 0" @choose="createPrompt" style="z-index: 2;"/>
+  <LanguageModal v-if="!language"
+    @choose="(lang: Language) => {
+      language = lang;
+      $i18n.locale = language;
+    }"
+    style="z-index: 2;"
+  />
 </template>
 
 <style scoped>
