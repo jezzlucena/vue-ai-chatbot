@@ -22,6 +22,7 @@ const isTyping = ref(false);
 const isInitiated = ref(false);
 const language = ref<Language | null>(null);
 const ws = ref<WebSocket | null>(null);
+const color = ref<string | null>(null);
 
 const scrollToBottom = () => {
   if (chatContainer.value) {
@@ -31,7 +32,7 @@ const scrollToBottom = () => {
 
 const sendMessage = (type: 'reset' | 'userMessage' | 'prompt', content?: string) => {
   if (ws.value && ws.value.readyState === WebSocket.OPEN) {
-    ws.value.send(JSON.stringify({ type, content }));
+    ws.value.send(JSON.stringify({ type, content, color: type === 'userMessage' ? color.value : undefined }));
     message.value = '';
   } else {
     switch (type) {
@@ -39,13 +40,12 @@ const sendMessage = (type: 'reset' | 'userMessage' | 'prompt', content?: string)
         messages.value.push({ role: 'system', content: content || '', error: true })
         break;
       case 'reset':
-        toast.error(t("error.sendingMessage"), TOAST_OPTIONS)
+        toast.error(t("error.resetting"), TOAST_OPTIONS)
         break;
       case 'userMessage':
-        messages.value.push({ role: 'user', content: content || '', error: true });
-        toast.error(t("error.resetting"), TOAST_OPTIONS)
+        messages.value.push({ role: 'user', content: content || '', color: color.value || '', error: true });
+        toast.error(t("error.sendingMessage"), TOAST_OPTIONS)
     }
-
   }
 }
 
@@ -102,7 +102,8 @@ onMounted(() => {
     else if (data.type === 'userMessage') {
       messages.value.push({
         role: 'user',
-        content: data.content
+        content: data.content,
+        color: data.color
       });
       isTyping.value = true;
       isLocked.value = true;
@@ -121,6 +122,8 @@ onMounted(() => {
         role: 'system',
         content: data.content
       });
+    } else if (data.type === 'color') {
+      color.value = data.content;
     }
 
     nextTick(() => scrollToBottom());
@@ -154,14 +157,16 @@ onUnmounted(() => {
             class="relative rounded-md py-2 px-4"
             :class="{
               'border border-gray-300 bg-white-100 px-6 text-center': msg.role === 'system',
-              'userMessage bg-blue-500 text-white mr-2': msg.role === 'user',
+              'userMessage text-white mr-2': msg.role === 'user',
               'aiMessage bg-gray-100 ml-2': msg.role === 'assistant'
             }"
+            :style="{ backgroundColor: msg.color }"
           >
             <pre
               class="overflow-x-auto whitespace-pre-wrap break-words text-sm hyphens-auto"
               :class="{ 'text-xs': msg.role === 'system' }"
             >{{ msg.content }}</pre>
+            <div class="triangle" :style="{ borderLeftColor: msg.color }"></div>
           </div>
           <div
             v-if="msg.error"
@@ -208,9 +213,10 @@ onUnmounted(() => {
             :class="{ 'opacity-50 cursor-not-allowed': isLocked }"
           >{{ $t("reset") }}</button>
           <button
-            class="ml-2 mt-1 bg-blue-500 hover:bg-blue-700 text-white py-1 px-2 rounded"
+            class="ml-2 mt-1 bg-blue-500 hover:opacity-70 text-white py-1 px-2 rounded"
             type="submit"
             :class="{ 'opacity-50 cursor-not-allowed': isLocked }"
+            :style="{ backgroundColor: color || '' }"
           >{{ $t("send") }}</button>
         </div>
       </form>
@@ -233,7 +239,7 @@ onUnmounted(() => {
 }
 
 .userMessage, .aiMessage {
-  &::after {
+  .triangle {
     content: '';
     position: absolute;
     bottom: 0;
@@ -241,12 +247,12 @@ onUnmounted(() => {
   }
 }
 
-.userMessage::after {
+.userMessage .triangle {
   right: -6px;
-  border-left: 13px solid rgb(59 130 246);
+  border-left: 13px solid;
 }
 
-.aiMessage::after {
+.aiMessage .triangle {
   left: -6px;
   border-right: 13px solid rgb(243 244 246);
 }
