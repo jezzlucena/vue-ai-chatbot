@@ -24,9 +24,10 @@ model = AutoModelForCausalLM.from_pretrained(
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
 EOS_TOKEN = "<|im_end|>"
+INITIAL_COLOR = "rgb(59 130 246)"
 
 messages: List[Message] = []
-random_colors: List[str] = ["rgb(59 130 246)"]
+random_colors: List[str] = [INITIAL_COLOR]
 color_index = 0
 
 app = FastAPI()
@@ -71,6 +72,7 @@ async def websocket_endpoint(websocket: WebSocket):
         if (color_index >= len(random_colors)):
             random_colors.append(random_dark_color())
         await websocket.send_text(json.dumps({ 'type': "color", 'content': random_colors[color_index] }))
+        print(random_colors[color_index])
         color_index += 1
         while True:
             text = await websocket.receive_text()
@@ -78,6 +80,9 @@ async def websocket_endpoint(websocket: WebSocket):
 
             if (data['type'] == 'reset'):
                 del messages [:]
+                del random_colors [:]
+                random_colors.append(INITIAL_COLOR)
+                color_index = 0
                 await manager.broadcast(json.dumps({ 'type': "reset" }))
             elif (data['type'] == 'userMessage'):
                 messages.append({ 'role': "user", 'content': data['content'], 'color': data['color'] })

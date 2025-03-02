@@ -4,7 +4,7 @@
   "choose": "Choose",
   "send": "Send",
   "reset": "Reset",
-  "changeLanguage": "Change Language",
+  "selectLanguage": "Select your language",
   "poweredBy": "powered by",
   "prompt": {
     "giveInstruction": "Give the AI assistant an \"instruction.\"",

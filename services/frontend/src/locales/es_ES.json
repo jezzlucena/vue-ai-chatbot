@@ -4,7 +4,7 @@
   "choose": "Eligir",
   "send": "Enviar",
   "reset": "Limpiar",
-  "changeLanguage": "Cambiar Idioma",
+  "selectLanguage": "Seleccione su idioma",
   "poweredBy": "powered by",
   "prompt": {
     "giveInstruction": "Dale \"instrucciones\" al assistente IA.",

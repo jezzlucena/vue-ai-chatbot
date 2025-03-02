@@ -20,7 +20,8 @@ const messages = ref<Message[]>([]);
 const isLocked = ref(true);
 const isTyping = ref(false);
 const isInitiated = ref(false);
-const language = ref<Language | null>(null);
+const language = ref<Language>('en_US');
+const isLanguageSelected = ref<boolean>(false);
 const ws = ref<WebSocket | null>(null);
 const color = ref<string | null>(null);
 
@@ -201,19 +202,19 @@ onUnmounted(() => {
           @focus="resizeTextArea"
         ></textarea>
         <div class="flex font-bold text-xs">
-          <div class="grow">powered by<a class="underline" href="https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct" target="_blank">Qwen 2.5</a></div>
+          <div class="grow">{{ $t('poweredBy') }} <a class="underline" href="https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct" target="_blank">Qwen 2.5</a></div>
           <button
             v-if="language"
-            class="ml-2 mt-1 bg-gray-100 hover:bg-gray-200 text-black py-1 px-2 rounded"
-            @click.prevent="() => language = null"
-          >{{ LANGUAGES[language] }}</button>
+            class="ml-2 bg-gray-100 hover:bg-gray-200 text-black py-1 px-2 rounded"
+            @click.prevent="() => isLanguageSelected = false"
+          >{{ LANGUAGES[language].short }}</button>
           <button
-            class="ml-2 mt-1 bg-gray-100 hover:bg-gray-200 text-black py-1 px-2 rounded"
+            class="ml-2 bg-gray-100 hover:bg-gray-200 text-black py-1 px-2 rounded"
             @click.prevent="clearMessages"
             :class="{ 'opacity-50 cursor-not-allowed': isLocked }"
           >{{ $t("reset") }}</button>
           <button
-            class="ml-2 mt-1 bg-blue-500 hover:opacity-70 text-white py-1 px-2 rounded"
+            class="ml-2 bg-blue-500 hover:opacity-70 text-white py-1 px-2 rounded"
             type="submit"
             :class="{ 'opacity-50 cursor-not-allowed': isLocked }"
             :style="{ backgroundColor: color || '' }"
@@ -223,10 +224,11 @@ onUnmounted(() => {
     </div>
   </div>
 
-  <PromptModal v-if="language && isInitiated && messages.length === 0" @choose="createPrompt" style="z-index: 2;"/>
-  <LanguageModal v-if="!language"
+  <PromptModal v-if="isLanguageSelected && isInitiated && messages.length === 0" @choose="createPrompt" style="z-index: 2;"/>
+  <LanguageModal v-if="!isLanguageSelected"
     @choose="(lang: Language) => {
       language = lang;
+      isLanguageSelected = true;
       $i18n.locale = language;
     }"
     style="z-index: 2;"
