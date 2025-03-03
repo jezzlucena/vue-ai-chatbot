@@ -156,6 +156,7 @@ onMounted(() => {
       isLocked.value = true
     } else if (data.type === 'assistantChunk') {
       messages.value[messages.value.length - 1].content += data.content
+      isLocked.value = true
     } else if (data.type === 'assistantMessageEnd') {
       isLocked.value = false
     } else if (data.type === 'prompt') {
