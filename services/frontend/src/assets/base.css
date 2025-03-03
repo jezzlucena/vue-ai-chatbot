@@ -1,3 +1,9 @@
+@font-face {
+  font-family: NotoColorEmojiLimited;
+  unicode-range: U+1F1E6-1F1FF;
+  src: url('@/assets/fonts/NotoColorEmoji.ttf');
+}
+
 /* color palette from <https://github.com/vuejs/theme> */
 :root {
   --vt-c-white: #ffffff;
@@ -54,6 +60,7 @@ body {
     background-color 0.5s;
   line-height: 1.6;
   font-family:
+    'NotoColorEmojiLimited',
     Inter,
     -apple-system,
     BlinkMacSystemFont,

@@ -41,9 +41,21 @@ app.add_middleware(
 )
 
 def random_dark_color():
-    red = random.randint(0, 150)
-    green = random.randint(0, 150)
-    blue = random.randint(0, 150)
+    low = random.randint(0, 50)
+    mid = random.randint(0, 150)
+    high = random.randint(0, 255)
+
+    components = [
+        { 'value': low, 'sortFactor': random.random() },
+        { 'value': mid, 'sortFactor': random.random() },
+        { 'value': high, 'sortFactor': random.random() }
+    ]
+
+    components.sort(key=lambda x: x['sortFactor'])
+
+    red = components[0]['value']
+    green = components[1]['value']
+    blue = components[2]['value']
 
     return f"rgb({red}, {green}, {blue})"
 

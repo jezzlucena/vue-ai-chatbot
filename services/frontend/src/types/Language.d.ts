@@ -1,1 +1,1 @@
-export type Language = 'pt_BR' | 'en_US' | 'es_ES';
+export type Language = 'pt_BR' | 'en_US' | 'es_ES'

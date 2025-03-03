@@ -1,21 +1,21 @@
-import type { Language } from "@/types/Language";
+import type { Language } from '@/types/Language'
 
 export const LANGUAGES: {
   [key in Language]: {
-    long: string,
+    long: string
     short: string
   }
 } = {
   en_US: {
-    long: "English 🇺🇸",
-    short: "Eng 🇺🇸"
+    long: 'English 🇺🇸',
+    short: '🇺🇸',
   },
-  es_ES: { 
-    long: "Español 🇪🇸",
-    short: "Esp 🇪🇸"
+  es_ES: {
+    long: 'Español 🇪🇸',
+    short: '🇪🇸',
   },
-  pt_BR: { 
-    long: "Português 🇧🇷",
-    short: "Por 🇧🇷"
-  }
-};
+  pt_BR: {
+    long: 'Português 🇧🇷',
+    short: '🇧🇷',
+  },
+}

@@ -8,7 +8,7 @@
   "poweredBy": "powered by",
   "prompt": {
     "giveInstruction": "Dê \"instruções\" ao seu assistente IA.",
-    "howShouldBehave": "Como deve se comportar-se durante esta conversa?",
+    "howShouldBehave": "Como ele deve comportar-se durante esta conversa?",
     "helpfulAssistant": "Você é um assistente prestativo.",
     "friendlyWaiter": "Você é uma garçonete em um restaurante movimentado.",
     "irishPirate": "Você é um pirata com um sotaque irlandês pesado.",
