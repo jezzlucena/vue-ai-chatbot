@@ -1,0 +1,26 @@
+name: vue-ai-chatbot-cuda
+
+services:
+  backend:
+    extends:
+      file: docker-compose.yml
+      service: backend
+    build:
+      dockerfile: Dockerfile.cuda
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: always
+
+  frontend:
+    extends:
+      file: docker-compose.yml
+      service: frontend
+
+volumes:
+  huggingface_hub_cache:
+  node_modules:

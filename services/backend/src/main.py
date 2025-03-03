@@ -315,7 +315,3 @@ def get_state() -> ChatbotState:
         'messages': chat_messages,
         'is_locked': is_locked
     }
-
-if __name__ == "__main__":
-    """Initiate uvicorn server"""
-    uvicorn.run("main:app", host="0.0.0.0", port=5051, reload=True)
