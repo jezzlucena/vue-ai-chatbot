@@ -24,6 +24,7 @@ model = AutoModelForCausalLM.from_pretrained(
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
 EOS_TOKEN = "<|im_end|>"
+PARAGRAPH_TOKEN = "\n\n"
 INITIAL_COLOR = "rgb(59 130 246)"
 
 messages: List[Message] = []
@@ -137,12 +138,24 @@ async def websocket_endpoint(websocket: WebSocket):
                     word = chunk
                     if (chunk.endswith(EOS_TOKEN)):
                         word = word.split(EOS_TOKEN)[0]
+                    elif (chunk.endswith(PARAGRAPH_TOKEN)):
+                        word = word.split(PARAGRAPH_TOKEN)[0]
                     await manager.broadcast(json.dumps({
                         'type': "assistantChunk",
                         'content': word
                     }))
 
                     response["content"] += word
+                    
+                    if (chunk.endswith(PARAGRAPH_TOKEN)):
+                        await manager.broadcast(json.dumps({
+                            'type': "assistantMessageEnd"
+                        }))
+                        response = { "role": "assistant", "content": "" }
+                        messages.append(response)
+                        await manager.broadcast(json.dumps({
+                            'type': "assistantMessageStart"
+                        }))
 
                 await manager.broadcast(json.dumps({
                     'type': "assistantMessageEnd"

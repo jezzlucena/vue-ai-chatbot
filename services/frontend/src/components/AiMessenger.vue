@@ -25,6 +25,7 @@ const isLanguageSelected = ref<boolean>(false)
 const isLocked = ref(true)
 const isUserTyping = ref(false)
 const messages = ref<Message[]>([])
+const textarea = ref<HTMLTextAreaElement | undefined>()
 const userInput = ref('')
 const userTypingTimeout = ref<number | undefined>()
 const ws = ref<WebSocket | undefined>()
@@ -67,6 +68,8 @@ const broadcast = (type: 'reset' | 'userMessage' | 'prompt', content?: string) =
         toast.error(t('error.sendingMessage'), TOAST_OPTIONS)
     }
   }
+
+  focusInput()
 }
 
 const getMessages = () => {
@@ -93,7 +96,7 @@ const createUserMessage = () => {
   if (!userInput.value || isLocked.value) return
   broadcast('userMessage', userInput.value)
   clearTimeout(userTypingTimeout.value)
-  isUserTyping.value = false;
+  isUserTyping.value = false
 }
 
 const clearMessages = () => {
@@ -101,11 +104,12 @@ const clearMessages = () => {
   broadcast('reset')
 }
 
-const resizeTextArea = (event: FocusEvent | KeyboardEvent) => {
-  const textarea = event.target as HTMLTextAreaElement
-  textarea.style.height = 'auto'
-  textarea.style.height = `${textarea.scrollHeight}px`
-  nextTick(() => scrollToBottom())
+const resizeTextArea = () => {
+  if (textarea.value) {
+    textarea.value.style.height = 'auto'
+    textarea.value.style.height = `${textarea.value.scrollHeight}px`
+    nextTick(() => scrollToBottom())
+  }
 }
 
 const handleUserTyping = () => {
@@ -116,6 +120,10 @@ const handleUserTyping = () => {
     isUserTyping.value = false
     userTypingTimeout.value = undefined
   }, 3000)
+}
+
+const focusInput = () => {
+  textarea.value?.focus()
 }
 
 onMounted(() => {
@@ -180,9 +188,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div
-    class="absolute flex flex-col top-0 left-[50%] bottom-0 w-[100%] -translate-x-[50%] pb-5 pr-5 pl-5 max-w-lg mx-auto my-0 overflow-hidden"
-  >
+  <div class="absolute flex flex-col top-0 left-[50%] bottom-0 w-[100%] -translate-x-[50%] pb-5 pr-5 pl-5 max-w-lg mx-auto my-0 overflow-hidden">
     <div
       class="absolute left-0 top-0 w-[100%] py-5 text-center backdrop-blur-sm bg-white bg-opacity-70 pointer-events-none whitespace-nowrap border-b border-gray border-solid"
       style="z-index: 1"
@@ -259,9 +265,15 @@ onUnmounted(() => {
     @choose="(language: Language) => {
       $i18n.locale = language
       isLanguageSelected = true
+      if (messages.length > 0) {
+        focusInput()
+      }
     }"
     @close="() => {
       isLanguageSelected = true
+      if (messages.length > 0) {
+        focusInput()
+      }
     }"
     style="z-index: 2"
   />

@@ -15,14 +15,18 @@ const props = defineProps<{
   userColor?: string
 }>()
 
-const textarea = ref<HTMLTextAreaElement | null>(null)
+const textarea = ref<HTMLTextAreaElement | undefined>()
 const userInput = ref('')
 
 const resizeTextArea = () => {
-  if (!!textarea.value) {
+  if (textarea.value) {
     textarea.value.style.height = 'auto'
     textarea.value.style.height = `${textarea.value.scrollHeight}px`
   }
+}
+
+const focusInput = () => {
+  textarea.value?.focus()
 }
 
 const handleChoose = () => {
@@ -30,6 +34,7 @@ const handleChoose = () => {
 }
 
 onMounted(() => {
+  focusInput()
   window.addEventListener('resize', resizeTextArea)
 })
 
@@ -39,7 +44,10 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="fixed top-0 left-0 right-0 bottom-0">
+  <div
+    class="fixed top-0 left-0 right-0 bottom-0"
+    @click="focusInput"
+  >
     <div class="absolute top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50"></div>
     <div
       class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-4 rounded-lg shadow-lg w-[90%] max-w-[500px]"
