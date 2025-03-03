@@ -147,13 +147,13 @@ onMounted(() => {
         color: data.color,
       })
       isAiTyping.value = true
-      isLocked.value = true
     } else if (data.type === 'assistantMessageStart') {
       messages.value.push({
         role: 'assistant',
         content: '',
       })
       isAiTyping.value = false
+      isLocked.value = true
     } else if (data.type === 'assistantChunk') {
       messages.value[messages.value.length - 1].content += data.content
     } else if (data.type === 'assistantMessageEnd') {

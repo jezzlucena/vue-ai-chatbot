@@ -85,7 +85,6 @@ async def websocket_endpoint(websocket: WebSocket):
         if (color_index >= len(random_colors)):
             random_colors.append(random_dark_color())
         await websocket.send_text(json.dumps({ 'type': "color", 'content': random_colors[color_index] }))
-        print(random_colors[color_index])
         color_index += 1
         while True:
             text = await websocket.receive_text()
