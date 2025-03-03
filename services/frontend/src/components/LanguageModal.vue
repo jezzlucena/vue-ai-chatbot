@@ -2,8 +2,11 @@
 import { LANGUAGES } from '@/utils/constants'
 import type { Language } from '@/types/Language'
 
+/** Define the props this component can receive */
 defineProps<{
+  /** Function that handles user language choice */
   onChoose: (language: Language) => void,
+  /** Function that handles closing the modal without a choice */
   onClose: () => void
 }>()
 </script>

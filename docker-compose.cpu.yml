@@ -1,23 +1,15 @@
-name: vue-ai-chatbot-cuda
+name: vue-ai-chatbot
 
 services:
   backend:
-    build: 
+    build:
       context: ./services/backend
-      dockerfile: Dockerfile.cuda
+      dockerfile: Dockerfile.cpu
     ports:
       - 5051:5051
     volumes:
       - ./services/backend:/app
       - huggingface_hub_cache:/root/.cache/huggingface/hub
-    command: uvicorn src.main:app --host 0.0.0.0 --port 5051
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
     restart: always
 
   frontend:

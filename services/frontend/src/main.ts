@@ -7,6 +7,7 @@ import App from './App.vue'
 import axios from 'axios'
 import messages from '@intlify/unplugin-vue-i18n/messages'
 
+/** Initiate vue-i18n utility class */
 const i18n = createI18n({
   locale: 'en_US',
   fallbackLocale: 'en_US',
@@ -14,10 +15,13 @@ const i18n = createI18n({
   messages,
 })
 
+/** Create Vue app */
 const app = createApp(App)
 
+/** Set vue app to use i18n utility class instance */
 app.use(i18n)
 
+/** Set axios defaults */
 axios.defaults.withCredentials = true
 axios.defaults.baseURL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5051/' // the FastAPI backend
 

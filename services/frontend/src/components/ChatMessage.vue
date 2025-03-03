@@ -28,7 +28,7 @@ defineProps<{
       >
         <pre
           v-if="message.content"
-          class="overflow-x-auto whitespace-pre-wrap break-words text-sm hyphens-auto"
+          class="messageContent overflow-x-auto whitespace-pre-wrap break-words text-sm hyphens-auto"
           :class="{ 'text-xs': message.role === 'system' }"
         >{{ message.content }}</pre>
         <div v-else>
@@ -55,6 +55,23 @@ defineProps<{
 </template>
 
 <style scoped>
+pre.messageContent {
+  font-family:
+    'NotoColorEmojiLimited',
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    Oxygen,
+    Ubuntu,
+    Cantarell,
+    'Fira Sans',
+    'Droid Sans',
+    'Helvetica Neue',
+    sans-serif;
+}
+
 .userMessage,
 .aiMessage {
   .triangle {

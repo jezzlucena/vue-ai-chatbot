@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { LANGUAGES } from '@/utils/constants'
+import { LANGUAGES, TOAST_OPTIONS } from '@/utils/constants'
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
-import { toast, type ToastOptions } from 'vue3-toastify'
+import { toast } from 'vue3-toastify'
 import { useI18n } from 'vue-i18n'
 import axios from 'axios'
 import ChatMessage from './ChatMessage.vue'
@@ -10,46 +10,70 @@ import PromptModal from './PromptModal.vue'
 import type { Language } from '@/types/Language'
 import type { Message } from '@/types/Message'
 
+/** Initiate I18n composable */
 const { t } = useI18n()
 
-const TOAST_OPTIONS: ToastOptions = {
-  position: toast.POSITION.TOP_RIGHT,
-  autoClose: 2000,
-}
+/** String literal representing the types of messages that can be sent */
+type SentDataType = 'reset' | 'userMessage' | 'prompt' | 'typing'
+/** String literal representing the types of messages that can be received */
+type ReceivedDataType = SentDataType | 'aiStart' | 'aiChunk' | 'aiEnd' | 'color'
 
+/** HTMLDivElement that contains the chat, used for scroll-to-bottom functionality */
 const chatContainer = ref<HTMLDivElement | undefined>()
-const userColor = ref<string | undefined>()
+/** Array that holds all messages in the current chatbot session (ai, prompt, and from all users) */
+const chatMessages = ref<Message[]>([])
+/** Whether the AI Assistant is typing up a message (in a processing state) */
 const isAiTyping = ref(false)
+/** Whether the chatbot UI is initiated (e.g. if the current state has been gathered from the server) */
 const isInitiated = ref(false)
+/** Whether a language has been explicitly selected */
 const isLanguageSelected = ref<boolean>(false)
+/** Whether the app is currently locked. Defaults to true until the state of the app is fetched */
 const isLocked = ref(true)
-const isUserTyping = ref(false)
-const messages = ref<Message[]>([])
-const textarea = ref<HTMLTextAreaElement | undefined>()
+/** HTMLTextAreaElement that holds the user input. Ref used for resizing the field on change events, and for focusing. */
+const textArea = ref<HTMLTextAreaElement | undefined>()
+/** Accent color assigned by the server to the current user in session */
+const userColor = ref<string | undefined>()
+/** Input content that the user currently has inside {@link textArea} */
 const userInput = ref('')
-const userTypingTimeout = ref<number | undefined>()
-const ws = ref<WebSocket | undefined>()
+/** Dictionary linking the color hash of each user that is currently typing to the respective timeout code */
+const userTypingTimeouts = ref<{ [color: string]: number | undefined }>({})
+/** Object that manages the connection to the WebSocket endpoint on our backend service */
+const webSocket = ref<WebSocket | undefined>()
 
+/** Scrolls the {@link chatContainer} to the bottom (e.g. when a new message is submitted by a user) */
 const scrollToBottom = () => {
-  if (chatContainer.value) {
-    chatContainer.value.scrollTop = chatContainer.value.scrollHeight
-  }
+  const elm = chatContainer.value
+  if (elm) elm.scrollTop = elm.scrollHeight
 }
 
-const broadcast = (type: 'reset' | 'userMessage' | 'prompt', content?: string) => {
-  if (ws.value && ws.value.readyState === WebSocket.OPEN) {
-    ws.value.send(
+/**
+ * Returns true if {@link chatContainer} is currently scrolled to the bottom
+ * Used to avoid screen jumps while the AI is streaming.
+ */
+const isScrolledToBottom = () => {
+  const elm = chatContainer.value
+  return elm &&
+    Math.abs(elm.scrollHeight - elm.scrollTop - elm.clientHeight) < 1
+}
+
+/** Streams data to the WebSocket endpoint */
+const sendData = (type: SentDataType, content?: string) => {
+  if (webSocket.value && webSocket.value.readyState === WebSocket.OPEN) {
+    /** If connection is open, send the stringified data. Clean up the input field if needed. */
+    webSocket.value.send(
       JSON.stringify({
         type,
         content,
-        color: type === 'userMessage' ? userColor.value : undefined,
+        color: ['typing', 'userMessage'].includes(type) ? userColor.value : undefined,
       }),
     )
-    userInput.value = ''
+    if (type === 'userMessage') userInput.value = ''
   } else {
+    /** Otherwise, handle error recovery (e.g. display a toast, show message with error flag) */
     switch (type) {
       case 'prompt':
-        messages.value.push({
+        chatMessages.value.push({
           role: 'system',
           content: content,
           error: true,
@@ -59,7 +83,7 @@ const broadcast = (type: 'reset' | 'userMessage' | 'prompt', content?: string) =
         toast.error(t('error.resetting'), TOAST_OPTIONS)
         break
       case 'userMessage':
-        messages.value.push({
+        chatMessages.value.push({
           role: 'user',
           content: content,
           color: userColor.value,
@@ -69,14 +93,18 @@ const broadcast = (type: 'reset' | 'userMessage' | 'prompt', content?: string) =
     }
   }
 
-  focusInput()
+  /** Focus on the textArea */
+  focusTextArea()
 }
 
-const getMessages = () => {
-  axios
-    .get('/messages')
+/**
+ * Fetches the current state of the app, this is used to synchronize
+ * the client state with the server state when the app is first opened */
+const getState = () => {
+  axios.get<{ messages: Message[], isLocked: boolean }>('/state')
     .then((res) => {
-      messages.value = res.data
+      chatMessages.value = res.data['messages']
+      isLocked.value = res.data['isLocked']
     })
     .catch((error) => {
       toast.error(t('error.fetchingMessages'), TOAST_OPTIONS)
@@ -88,103 +116,185 @@ const getMessages = () => {
     })
 }
 
+/** Submit prompt message */
 const createPrompt = (content: string) => {
-  broadcast('prompt', content)
+  sendData('prompt', content)
 }
 
+/** Submit user message */
 const createUserMessage = () => {
   if (!userInput.value || isLocked.value) return
-  broadcast('userMessage', userInput.value)
-  clearTimeout(userTypingTimeout.value)
-  isUserTyping.value = false
+  sendData('userMessage', userInput.value)
 }
 
+/** Empty the chat messages array, synchronizing with all clients */
 const clearMessages = () => {
-  if (messages.value.length === 0 || isLocked.value) return
-  broadcast('reset')
+  if (chatMessages.value.length === 0 || isLocked.value) return
+  sendData('reset')
 }
 
+/** Submit signal to add a typing indicator on all clients' screens */
+const handleUserTyping = () => {
+  sendData('typing')
+}
+
+/**
+ * Resize text area (e.g. when the user types a message that takes
+ * up more than one line.)
+ */
 const resizeTextArea = () => {
-  if (textarea.value) {
-    textarea.value.style.height = 'auto'
-    textarea.value.style.height = `${textarea.value.scrollHeight}px`
-    nextTick(() => scrollToBottom())
+  if (textArea.value) {
+    const wasAtBottom = isScrolledToBottom()
+
+    textArea.value.style.height = 'auto'
+    textArea.value.style.height = `${textArea.value.scrollHeight}px`
+
+    if (wasAtBottom) nextTick(() => scrollToBottom())
   }
 }
 
-const handleUserTyping = () => {
-  isUserTyping.value = true
+/** 
+ * Handle explicit language selection (e.g. user either selected
+ * a language or closed the language selection modal on purpose).
+ */
+const handleSelectLanguage = () => {
+  isLanguageSelected.value = true
 
-  clearTimeout(userTypingTimeout.value)
-  userTypingTimeout.value = setTimeout(() => {
-    isUserTyping.value = false
-    userTypingTimeout.value = undefined
-  }, 3000)
+  /** 
+   * Only focus on the textArea if there are chatMessages (e.g.
+   * to avoid focusing on a field behind the {@link PromptModal}).
+   */
+  if (chatMessages.value.length > 0) focusTextArea()
 }
 
-const focusInput = () => {
-  textarea.value?.focus()
+/** Focus on the user textArea input field */
+const focusTextArea = () => {
+  textArea.value?.focus()
 }
 
+/** Function that runs when the component is successfully mounted */
 onMounted(() => {
-  getMessages()
+  /** Fetch and synchronize with the server state */
+  getState()
 
-  ws.value = new WebSocket(import.meta.env.VITE_WEBSOCKET_URL)
+  /** Connect with the WebSocket endpoint */
+  webSocket.value = new WebSocket(import.meta.env.VITE_WEBSOCKET_URL)
 
-  ws.value.onopen = () => {
+  /** Show success toast and unlock the app once WebSocket connects */
+  webSocket.value.onopen = () => {
     toast.success(t('connected'), TOAST_OPTIONS)
     isLocked.value = false
   }
 
-  ws.value.onmessage = (event) => {
-    const data = JSON.parse(event.data)
+  /** Process data received from the server */
+  webSocket.value.onmessage = (event: MessageEvent<string>) => {
+    const data: { 
+      type: ReceivedDataType,
+      content?: string,
+      color?: string
+    } = JSON.parse(event.data)
+    /** 
+     * Only scroll to bottom in the end of this function if
+     * the chat was already scrolled to the bottom to begin with.
+     * This is done to avoid screen jumps.
+     */
+    const wasAtBottom = isScrolledToBottom()
 
-    if (data.type === 'reset') messages.value = []
-    else if (data.type === 'userMessage') {
-      messages.value.push({
-        role: 'user',
-        content: data.content,
-        color: data.color,
-      })
-      isAiTyping.value = true
-    } else if (data.type === 'assistantMessageStart') {
-      messages.value.push({
-        role: 'assistant',
-        content: '',
-      })
-      isAiTyping.value = false
-      isLocked.value = true
-    } else if (data.type === 'assistantChunk') {
-      messages.value[messages.value.length - 1].content += data.content
-      isLocked.value = true
-    } else if (data.type === 'assistantMessageEnd') {
-      isLocked.value = false
-    } else if (data.type === 'prompt') {
-      messages.value.push({
-        role: 'system',
-        content: data.content,
-      })
-    } else if (data.type === 'color') {
-      userColor.value = data.content
+    switch (data.type) {
+      case 'reset':
+        /** Empty chatMessages */
+        chatMessages.value = []
+        break
+      case 'userMessage':
+        /**
+         * 1 - Push user message to chatMessages with the respective color
+         * 2 - Clear timeouts and delete keys from the timeouts dictionary,
+         * that way no more typing indicators are displayed.
+         * 3 - Add AI Typing indicator.
+         */
+        chatMessages.value.push({
+          role: 'user',
+          content: data.content,
+          color: data.color,
+        })
+        clearTimeout(userTypingTimeouts.value[data.color as string])
+        delete userTypingTimeouts.value[data.color as string]
+        isAiTyping.value = true
+        break
+      case 'aiStart':
+        /**
+         * Create a new AI message, hide AI typing indicator, and lock
+         * the app. Prepare for a stream of chunks.
+         */
+        chatMessages.value.push({
+          role: 'assistant',
+          content: '',
+        })
+        isAiTyping.value = false
+        isLocked.value = true
+        break
+      case 'aiChunk':
+        /** Add a chunk of stream to the last message on the chat */
+        chatMessages.value[chatMessages.value.length - 1].content += data.content as string
+        isLocked.value = true
+        break
+      case 'aiEnd':
+        /** Unlock the app */
+        isLocked.value = false
+        break
+      case 'prompt':
+        /**
+         * Add a system prompt to the messages array (usually
+         * done when the session first starts, or when messages
+         * are reset)
+         */
+        chatMessages.value.push({
+          role: 'system',
+          content: data.content,
+        })
+        break
+      case 'color':
+        /**
+         * Take note of the color that the server assigned to
+         * the current user.
+         */
+        userColor.value = data.content
+        break
+      case 'typing':
+        /**
+         * Display typing indicator for the respective color,
+         * clear and set timeouts accordingly 
+         */
+        clearTimeout(userTypingTimeouts.value[data.color as string])
+        userTypingTimeouts.value[data.color as string] = setTimeout(() => {
+          delete userTypingTimeouts.value[data.color as string]
+        }, 5000)
     }
 
-    nextTick(() => scrollToBottom())
+    if (wasAtBottom) nextTick(() => scrollToBottom())
   }
 
-  ws.value.onclose = () => {
+  /** Display error toast if connection to WebSocket endpoint is closed */
+  webSocket.value.onclose = () => {
     toast.error(t('disconnected'), TOAST_OPTIONS)
     isLocked.value = true
   }
 
-  ws.value.onerror = () => {
+  /** Display error toast if error happens on WebSocket endpoint */
+  webSocket.value.onerror = () => {
     toast.error(t('error.websocket'), TOAST_OPTIONS)
   }
+
+  /** Add event listener for window resizes */
+  window.addEventListener('resize', resizeTextArea)
 })
 
+/** Gracefully close the WebSocket connection when unmounting */
 onUnmounted(() => {
-  if (ws.value) {
-    ws.value.close()
+  if (webSocket.value) {
+    webSocket.value.close()
   }
+  window.removeEventListener('resize', resizeTextArea)
 })
 </script>
 
@@ -203,9 +313,17 @@ onUnmounted(() => {
       </span>
     </div>
     <div ref="chatContainer" class="chatContainer grow overflow-y-scroll pt-[90px]">
-      <ChatMessage v-for="(message, index) in messages" :message="message" :key="index" />
+      <ChatMessage
+        v-for="(message, index) in chatMessages"
+        :message="message"
+        :key="index"
+      />
       <ChatMessage v-if="isAiTyping" :message="{ role: 'assistant' }" />
-      <ChatMessage v-if="isUserTyping" :message="{ role: 'user', color: userColor }" />
+      <ChatMessage
+        v-for="color of Object.keys(userTypingTimeouts)"
+        :key="color"
+        :message="{ role: 'user', color }"
+      />
     </div>
     <div>
       <form @submit.prevent="createUserMessage">
@@ -213,7 +331,7 @@ onUnmounted(() => {
           class="p-[10px] w-[100%] h-auto overflow-y-hidden text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500"
           rows="1"
           v-model="userInput"
-          ref="textarea"
+          ref="textArea"
           @keydown="handleUserTyping"
           @keydown.enter.prevent="createUserMessage"
           @keyup="resizeTextArea"
@@ -256,7 +374,7 @@ onUnmounted(() => {
   </div>
 
   <PromptModal
-    v-if="isLanguageSelected && isInitiated && messages.length === 0"
+    v-if="isLanguageSelected && isInitiated && chatMessages.length === 0"
     @choose="createPrompt"
     :userColor="userColor"
     style="z-index: 2"
@@ -265,17 +383,9 @@ onUnmounted(() => {
     v-if="!isLanguageSelected"
     @choose="(language: Language) => {
       $i18n.locale = language
-      isLanguageSelected = true
-      if (messages.length > 0) {
-        focusInput()
-      }
+      handleSelectLanguage()
     }"
-    @close="() => {
-      isLanguageSelected = true
-      if (messages.length > 0) {
-        focusInput()
-      }
-    }"
+    @close="handleSelectLanguage"
     style="z-index: 2"
   />
 </template>
