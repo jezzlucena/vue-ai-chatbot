@@ -10,7 +10,6 @@ services:
     volumes:
       - ./services/backend:/app
       - huggingface_hub_cache:/root/.cache/huggingface/hub
-    command: uvicorn src.main:app --host 0.0.0.0 --port 5051
     restart: always
 
   frontend:

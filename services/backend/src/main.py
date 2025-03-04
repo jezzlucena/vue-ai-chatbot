@@ -8,7 +8,6 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, AsyncTextIteratorS
 from typing import List, Literal, Optional
 import json
 import random
-import uvicorn
 
 class CamelCaseModel(BaseModel):
     """Model that configures CamelCase alias generation,
