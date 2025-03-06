@@ -91,6 +91,8 @@ const sendData = (type: SentDataType, content?: string) => {
         })
         toast.error(t('error.sendingMessage'), TOAST_OPTIONS)
     }
+
+    nextTick(() => scrollToBottom())
   }
 
   /** Focus on the textArea */
