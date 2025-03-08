@@ -44,13 +44,6 @@
   --section-gap: 160px;
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  font-weight: normal;
-}
 
 body {
   color: var(--color-text);

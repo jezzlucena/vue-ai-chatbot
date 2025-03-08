@@ -301,7 +301,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="absolute flex flex-col top-0 left-[50%] bottom-0 w-[100%] -translate-x-[50%] pb-5 pr-5 pl-5 max-w-lg mx-auto my-0 overflow-hidden">
+  <div class="absolute flex flex-col top-0 left-[50%] bottom-0 w-[100%] -translate-x-[50%] pb-5 pr-5 pl-5 overflow-hidden">
     <div
       class="absolute left-0 top-0 w-[100%] py-5 text-center backdrop-blur-sm bg-white bg-opacity-70 pointer-events-none whitespace-nowrap border-b border-gray border-solid"
       style="z-index: 1"
@@ -314,7 +314,7 @@ onUnmounted(() => {
         {{ $t('byJezzLucena') }}
       </span>
     </div>
-    <div ref="chatContainer" class="chatContainer grow overflow-y-scroll pt-[90px]">
+    <div ref="chatContainer" class="chatContainer grow overflow-y-scroll w-[100%] max-w-lg mx-auto my-0 pt-[90px]">
       <ChatMessage
         v-for="(message, index) in chatMessages"
         :message="message"
@@ -327,17 +327,19 @@ onUnmounted(() => {
         :message="{ role: 'user', color }"
       />
     </div>
-    <div>
+    <div class="max-w-lg w-[100%] mx-auto my-0">
       <form @submit.prevent="createUserMessage">
         <textarea
           class="p-[10px] w-[100%] h-auto overflow-y-hidden text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500"
           rows="1"
           v-model="userInput"
           ref="textArea"
-          @keydown="handleUserTyping"
-          @keydown.enter.prevent="createUserMessage"
-          @keyup="resizeTextArea"
-          @focus="resizeTextArea"
+          @keydown.enter.exact.prevent="createUserMessage"
+          @keydown.enter.shift.exact.prevent="userInput += '\n'"
+          @keyup="() => {
+            resizeTextArea();
+            handleUserTyping();
+          }"
         ></textarea>
         <div class="flex font-bold text-xs">
           <div class="grow">

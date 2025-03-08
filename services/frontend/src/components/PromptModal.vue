@@ -44,6 +44,7 @@ const focusTextArea = () => {
 
 /** Handles user selection of the prompt */
 const handleChoose = () => {
+  if (!userInput.value) return;
   onChoose(userInput.value)
 }
 
@@ -96,9 +97,9 @@ onUnmounted(() => {
             rows="1"
             v-model="userInput"
             ref="textArea"
-            @keydown.enter.prevent="handleChoose"
+            @keydown.enter.shift.exact.prevent="userInput += '\n'"
+            @keydown.enter.exact.prevent="handleChoose"
             @keyup="resizeTextArea"
-            @focus="resizeTextArea"
           ></textarea>
           <div class="flex">
             <div class="grow"></div>
