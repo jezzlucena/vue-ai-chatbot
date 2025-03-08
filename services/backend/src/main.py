@@ -88,11 +88,6 @@ async def websocket_endpoint(websocket: WebSocket):
             text = await websocket.receive_text()
             """Wait for the user to send a chat message or a command"""
             
-            if (is_locked):
-                """If the app is locked (e.g. because the assistant is
-                currently broadcasting a message to the clients), ignore
-                any other messages to avoid inconsistencies."""
-                continue
             data = json.loads(text)
             """Parse the text received from the client into a dict"""
 
