@@ -19,11 +19,15 @@ type SentDataType = 'reset' | 'userMessage' | 'prompt' | 'typing'
 type ReceivedDataType = SentDataType | 'aiStart' | 'aiChunk' | 'aiEnd' | 'color'
 
 /** HTMLDivElement that contains the chat, used for scroll-to-bottom functionality */
+const messengerContainer = ref<HTMLDivElement | undefined>()
+/** HTMLDivElement that contains the chat, used for scroll-to-bottom functionality */
 const chatContainer = ref<HTMLDivElement | undefined>()
 /** Array that holds all messages in the current chatbot session (ai, prompt, and from all users) */
 const chatMessages = ref<Message[]>([])
 /** Whether the AI Assistant is typing up a message (in a processing state) */
 const isAiTyping = ref(false)
+/** Whether the AI Assistant is typing up a message (in a processing state) */
+const isAtBottom = ref(true)
 /** Whether the chatbot UI is initiated (e.g. if the current state has been gathered from the server) */
 const isInitiated = ref(false)
 /** Whether a language has been explicitly selected */
@@ -42,9 +46,9 @@ const userTypingTimeouts = ref<{ [color: string]: number | undefined }>({})
 const webSocket = ref<WebSocket | undefined>()
 
 /** Scrolls the {@link chatContainer} to the bottom (e.g. when a new message is submitted by a user) */
-const scrollToBottom = () => {
+const scrollChatToBottom = () => {
   const elm = chatContainer.value
-  if (elm) elm.scrollTop = elm.scrollHeight
+  if (elm) elm.scroll({ top: elm.scrollHeight, behavior: 'smooth' })
 }
 
 /**
@@ -92,7 +96,7 @@ const sendData = (type: SentDataType, content?: string) => {
         toast.error(t('error.sendingMessage'), TOAST_OPTIONS)
     }
 
-    nextTick(() => scrollToBottom())
+    nextTick(() => scrollChatToBottom())
   }
 
   /** Focus on the textArea */
@@ -114,7 +118,7 @@ const getState = () => {
     })
     .finally(() => {
       isInitiated.value = true
-      nextTick(() => scrollToBottom())
+      nextTick(() => scrollChatToBottom())
     })
 }
 
@@ -146,12 +150,10 @@ const handleUserTyping = () => {
  */
 const resizeTextArea = () => {
   if (textArea.value) {
-    const wasAtBottom = isScrolledToBottom()
-
     textArea.value.style.height = 'auto'
     textArea.value.style.height = `${textArea.value.scrollHeight}px`
 
-    if (wasAtBottom) nextTick(() => scrollToBottom())
+    if (isAtBottom.value) nextTick(() => scrollChatToBottom())
   }
 }
 
@@ -195,13 +197,6 @@ onMounted(() => {
       content?: string,
       color?: string
     } = JSON.parse(event.data)
-    /** 
-     * Only scroll to bottom in the end of this function if
-     * the chat was already scrolled to the bottom to begin with.
-     * This is done to avoid screen jumps.
-     */
-    const wasAtBottom = isScrolledToBottom()
-
     switch (data.type) {
       case 'reset':
         /** Empty chatMessages */
@@ -273,7 +268,12 @@ onMounted(() => {
         }, 5000)
     }
 
-    if (wasAtBottom) nextTick(() => scrollToBottom())
+    /** 
+     * Only scroll to bottom in the end of this function if
+     * the chat was already scrolled to the bottom to begin with.
+     * This is done to avoid screen jumps.
+     */
+    if (isAtBottom.value) nextTick(() => scrollChatToBottom())
   }
 
   /** Display error toast if connection to WebSocket endpoint is closed */
@@ -298,10 +298,34 @@ onUnmounted(() => {
   }
   window.removeEventListener('resize', resizeTextArea)
 })
+
+const scrollWindowToTop = () => {
+  window.scroll({ top: 0, behavior: 'smooth' })
+}
+
+window.addEventListener('scroll', scrollWindowToTop)
+
+const resizeVisualViewport = () => {
+  if (messengerContainer.value) 
+    messengerContainer.value.style.height = window.visualViewport ? `${window.visualViewport.height}px` : '100dvh';
+  
+  scrollWindowToTop()
+
+  if (isAtBottom.value) nextTick(() => scrollChatToBottom())
+}
+
+window.visualViewport?.addEventListener('resize', resizeVisualViewport)
+screen.orientation.addEventListener('change', resizeVisualViewport)
+
+nextTick(() => {
+  messengerContainer.value?.addEventListener('scroll', () => {
+    isAtBottom.value = isScrolledToBottom() || false
+  })
+})
 </script>
 
 <template>
-  <div class="absolute flex flex-col top-0 left-[50%] bottom-0 w-[100%] -translate-x-[50%] pb-5 pr-5 pl-5 overflow-hidden">
+  <div ref="messengerContainer" class="fixed flex flex-col top-0 left-[50%] h-[100svh] w-[100%] -translate-x-[50%] pb-5 pr-5 pl-5 overflow-hidden">
     <div
       class="absolute left-0 top-0 w-[100%] py-5 text-center backdrop-blur-sm bg-white bg-opacity-70 pointer-events-none whitespace-nowrap border-b border-gray border-solid"
       style="z-index: 1"
@@ -314,7 +338,7 @@ onUnmounted(() => {
         {{ $t('byJezzLucena') }}
       </span>
     </div>
-    <div ref="chatContainer" class="chatContainer grow overflow-y-scroll w-[100%] max-w-lg mx-auto my-0 pt-[90px]">
+    <div ref="chatContainer" class="chatContainer grow overflow-x-hidden overflow-y-scroll w-[100%] max-w-lg mx-auto my-0 pt-[90px]">
       <ChatMessage
         v-for="(message, index) in chatMessages"
         :message="message"
@@ -330,14 +354,16 @@ onUnmounted(() => {
     <div class="max-w-lg w-[100%] mx-auto my-0">
       <form @submit.prevent="createUserMessage">
         <textarea
-          class="p-[10px] w-[100%] h-auto overflow-y-hidden text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+          class="relative p-[10px] w-[100%] h-auto overflow-y-hidden text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500"
           rows="1"
           v-model="userInput"
           ref="textArea"
+          style="z-index: 1"
           @keydown.enter.exact.prevent="createUserMessage"
           @keydown.enter.shift.exact.prevent="userInput += '\n'"
-          @keyup="() => {
+          @keyup="(event: KeyboardEvent) => {
             resizeTextArea();
+            if (event.key === 'Enter' && !event.shiftKey) return;
             handleUserTyping();
           }"
         ></textarea>

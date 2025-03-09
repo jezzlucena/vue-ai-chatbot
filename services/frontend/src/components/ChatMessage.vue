@@ -18,7 +18,7 @@ defineProps<{
       }"
     >
       <div
-        class="relative rounded-md py-2 px-4"
+        class="relative rounded-2xl py-2 px-4"
         :class="{
           'border border-gray-300 bg-white-100 px-6 text-center': message.role === 'system',
           'userMessage bg-blue-500 text-white mr-2': message.role === 'user',
@@ -36,7 +36,7 @@ defineProps<{
           <div class="dot"></div>
           <div class="dot"></div>
         </div>
-        <div class="triangle" :style="{ borderLeftColor: message.color }"></div>
+        <div class="triangle" :style="{ backgroundColor: message.color }"></div>
       </div>
       <div
         v-if="message.error"
@@ -78,7 +78,16 @@ pre.messageContent {
     content: '';
     position: absolute;
     bottom: 0;
-    border-top: 15px solid transparent;
+    height: 16px;
+    width: 16px;
+
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      top: 0;
+      background-color: white;
+    }
   }
 
   .dot {
@@ -108,12 +117,25 @@ pre.messageContent {
 
 .userMessage .triangle {
   right: -6px;
-  border-left: 13px solid;
+  border-radius: 0 0 0 100%;
+
+  &::after {
+    right: -2px;
+    left: 10px;
+    border-radius: 0 0 0 100%;
+  }
 }
 
 .aiMessage .triangle {
-  left: -6px;
-  border-right: 13px solid rgb(243 244 246);
+  left: -8px;
+  background-color: rgb(243 244 246);
+  border-radius: 0 0 100% 0%;
+
+  &::after {
+    left: -2px;
+    right: 10px;
+    border-radius: 0 0 100% 0%;
+  }
 }
 
 .aiMessage .dot {
